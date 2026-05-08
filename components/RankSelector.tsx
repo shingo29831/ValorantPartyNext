@@ -128,7 +128,7 @@ export const RankSelector: React.FC<Props> = ({ rank, tier, onUpdateRank, onUpda
     return createPortal(
       <div
         ref={menuRef}
-        className="fixed bg-val-dark/95 backdrop-blur-sm border border-val-gray/30 p-3 rounded-lg shadow-2xl z-[9999] max-w-[90vw] md:max-w-none"
+        className="fixed bg-val-dark/95 backdrop-blur-sm border border-val-gray/30 p-3 rounded-lg shadow-2xl z-9999 max-w-[90vw] md:max-w-none"
         style={{ top: '-9999px', left: '-9999px' }}
       >
         <div className="flex gap-1 md:gap-2 overflow-x-auto px-1 py-1 pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-val-gray/50 [&::-webkit-scrollbar-thumb]:rounded-full">
@@ -161,7 +161,7 @@ export const RankSelector: React.FC<Props> = ({ rank, tier, onUpdateRank, onUpda
 
         {/* 吹き出しの三角形 */}
         <div className="menu-arrow-outer absolute -top-4 -translate-x-1/2 border-8 border-transparent border-b-val-gray/30"></div>
-        <div className="menu-arrow-inner absolute -top-[14px] -translate-x-1/2 border-8 border-transparent border-b-val-dark/95"></div>
+        <div className="menu-arrow-inner absolute -top-3.5 -translate-x-1/2 border-8 border-transparent border-b-val-dark/95"></div>
       </div>,
       document.body
     );

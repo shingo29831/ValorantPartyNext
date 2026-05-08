@@ -1,26 +1,25 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ここに書いた --color-*** が、自動的に bg-*** や text-*** として使えるようになります */
+  --color-val-red: #FF4655;
+  --color-val-dark: #111111;
+  --color-val-gray: #768079;
+  --color-val-light: #ECE8E1;
+  --color-val-blue: #0f1923;
+
+  /* アニメーションの定義 */
+  --animate-fade-in: fadeIn 0.2s ease-out forwards;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* キーフレームは @theme の外に書きます */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -311,7 +311,7 @@ export default function Page() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-[100rem] w-full mx-auto p-2 md:p-4 flex flex-col min-h-0 relative">
+      <main className="flex-1 max-w-400 w-full mx-auto p-2 md:p-4 flex flex-col min-h-0 relative">
         
         {screen === 'setup' && (
           <div className="space-y-4 md:space-y-6 animate-slide-up overflow-y-auto pb-10">
@@ -492,7 +492,7 @@ export default function Page() {
               <SlidersHorizontal className="w-8 h-8" /> {t.advancedSettings}
             </h2>
 
-            <nav className="sticky top-[52px] md:top-[60px] z-30 bg-val-dark/95 backdrop-blur-md border-y border-val-gray/30 py-3 md:py-4 mb-6 -mx-2 px-2 md:-mx-4 md:px-4 shadow-lg">
+            <nav className="sticky top-13 md:top-15 z-30 bg-val-dark/95 backdrop-blur-md border-y border-val-gray/30 py-3 md:py-4 mb-6 -mx-2 px-2 md:-mx-4 md:px-4 shadow-lg">
               <div className="flex gap-2 md:gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden items-center pb-1">
                 <Menu className="w-6 h-6 md:w-8 md:h-8 text-val-gray shrink-0 mr-1 md:mr-2" />
                 {[
@@ -597,7 +597,7 @@ export default function Page() {
                                 <span className="text-xs md:text-sm text-white font-bold leading-tight px-1 whitespace-nowrap">{t.bannedStatus || 'BANNED'}</span>
                               </div>
                             )}
-                            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black via-black/70 to-transparent p-2 pt-6 pointer-events-none text-center z-20">
+                            <div className="absolute bottom-0 left-0 w-full bg-linear-to-t from-black via-black/70 to-transparent p-2 pt-6 pointer-events-none text-center z-20">
                               <div className={`font-bold text-sm md:text-base truncate drop-shadow-md ${isSelected && !isBanned ? 'text-white' : 'text-val-gray'} ${isBanned ? 'line-through' : ''}`}>
                                 {t[mw] || mw}
                               </div>
@@ -654,7 +654,7 @@ export default function Page() {
                               </div>
                             )}
 
-                            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black via-black/70 to-transparent p-2 pt-6 pointer-events-none text-center z-20">
+                            <div className="absolute bottom-0 left-0 w-full bg-linear-to-t from-black via-black/70 to-transparent p-2 pt-6 pointer-events-none text-center z-20">
                               <div className={`font-bold text-sm md:text-base truncate drop-shadow-md ${isAllowed && !isBanned ? 'text-white' : 'text-val-gray line-through'}`}>
                                   {t[sw] || sw}
                               </div>
@@ -680,7 +680,7 @@ export default function Page() {
                   className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
                   onError={(e) => e.currentTarget.style.display = 'none'}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-val-dark via-val-dark/70 to-transparent pointer-events-none"></div>
+                <div className="absolute inset-0 bg-linear-to-r from-val-dark via-val-dark/70 to-transparent pointer-events-none"></div>
                 <div className="absolute inset-y-0 left-0 flex flex-col justify-center p-4 md:p-8 pointer-events-none">
                   <span className="text-[10px] md:text-sm text-val-gray font-bold uppercase tracking-widest mb-1">{t.map}</span>
                   <span className="text-2xl md:text-5xl text-white font-bold uppercase tracking-tighter italic drop-shadow-md">{t[result.map] || result.map}</span>
@@ -701,7 +701,7 @@ export default function Page() {
                       {t.teamWeight.replace('{weight}', String(defenderWeight))}
                     </span>
                   )}
-                  <div className="h-[2px] flex-1 bg-gradient-to-r from-blue-500/50 to-transparent"></div>
+                  <div className="h-0.5 flex-1 bg-linear-to-r from-blue-500/50 to-transparent"></div>
                 </div>
                 <div className="grid grid-cols-5 gap-2 relative z-10 w-full">
                   {defenders.map(p => <PlayerCard key={p.id} player={p} isDefender={true} t={t} />)}
@@ -709,7 +709,7 @@ export default function Page() {
               </div>
 
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
-                <div className="bg-val-dark px-5 py-2 border-2 border-val-red text-val-red font-bold text-xl md:text-2xl italic shadow-2xl skew-x-[-10deg]"><div className="skew-x-[10deg]">{t.vs || 'VS'}</div></div>
+                <div className="bg-val-dark px-5 py-2 border-2 border-val-red text-val-red font-bold text-xl md:text-2xl italic shadow-2xl -skew-x-10"><div className="skew-x-10">{t.vs || 'VS'}</div></div>
               </div>
 
               <div className="flex-1 bg-red-900/10 border-t-2 border-val-red p-2 md:p-3 relative overflow-hidden shadow-lg flex flex-col min-h-0 rounded-b items-start">
@@ -724,7 +724,7 @@ export default function Page() {
                       {t.teamWeight.replace('{weight}', String(attackerWeight))}
                     </span>
                   )}
-                  <div className="h-[2px] flex-1 bg-gradient-to-r from-val-red/50 to-transparent"></div>
+                  <div className="h-0.5 flex-1 bg-linear-to-r from-val-red/50 to-transparent"></div>
                 </div>
                 <div className="grid grid-cols-5 gap-2 relative z-10 w-full">
                   {attackers.map(p => <PlayerCard key={p.id} player={p} isDefender={false} t={t} />)}

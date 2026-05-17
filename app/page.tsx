@@ -4,11 +4,11 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateMatch, getRankWeight } from '../logic/randomizer';
 import { validateTeamCreation } from '../logic/validator';
 import { Player, RandomizerConfig, AdvancedConfig, Rank, Tier, Role, Team, MatchResult } from '../types';
-import { Swords, Shield, Settings2, Users, ArrowLeft, RefreshCw, Globe, SlidersHorizontal, Ban, Menu } from 'lucide-react';
+import { Swords, Shield, Settings2, Users, ArrowLeft, RefreshCw, Globe, SlidersHorizontal, Ban, Menu, ChevronDown, History } from 'lucide-react';
 import { MAPS, MAIN_WEAPONS, SUB_WEAPONS, AGENTS } from '../constants/valorant';
 import { PlayerCard } from '../components/PlayerCard';
 import { QuickBanCarousel } from '../components/QuickBanCarousel';
@@ -42,6 +42,13 @@ type ScreenState = 'setup' | 'advanced' | 'result';
 type Language = 'ja' | 'en';
 type AdvancedTab = 'adv-rank' | 'adv-maps' | 'adv-agents' | 'adv-main-weapons' | 'adv-sub-weapons' | 'adv-combos';
 
+interface PlayerHistoryData {
+  name: string;
+  rank: Rank;
+  tier: Tier;
+  preferredRoles: Role[];
+}
+
 export default function Page() {
   const [screen, setScreen] = useState<ScreenState>('setup');
   const [lang, setLang] = useState<Language>('ja');
@@ -72,7 +79,24 @@ export default function Page() {
   const [selectedComboMain, setSelectedComboMain] = useState<string>(MAIN_WEAPONS[0]);
   const [result, setResult] = useState<MatchResult | null>(null);
 
+  const [playerHistory, setPlayerHistory] = useState<PlayerHistoryData[]>([]);
+  const [isRulesExpanded, setIsRulesExpanded] = useState(true);
+
   const t = TRANSLATIONS[lang] as Record<string, string>;
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('valorantPartyPlayerHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setPlayerHistory(parsed);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const handleGenerate = () => {
     const activePlayers = players.filter(p => p.name.trim() !== '');
@@ -91,6 +115,29 @@ export default function Page() {
       }
     }
 
+    try {
+      const newHistory = [...playerHistory];
+      activePlayers.forEach(p => {
+        if (/^Player \d+$/.test(p.name)) return;
+        
+        const existingIndex = newHistory.findIndex(h => h.name === p.name);
+        if (existingIndex >= 0) {
+          newHistory.splice(existingIndex, 1);
+        }
+        newHistory.unshift({
+          name: p.name,
+          rank: p.rank,
+          tier: p.tier,
+          preferredRoles: p.preferredRoles
+        });
+      });
+      const limitedHistory = newHistory.slice(0, 50);
+      setPlayerHistory(limitedHistory);
+      localStorage.setItem('valorantPartyPlayerHistory', JSON.stringify(limitedHistory));
+    } catch (e) {
+      console.error(e);
+    }
+
     const matchResult = generateMatch(activePlayers, config, advanced);
 
     if (!config.restrictAgents && !config.restrictRoles) {
@@ -101,6 +148,23 @@ export default function Page() {
     setResult(matchResult);
     setScreen('result');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddFromHistory = (historyItem: PlayerHistoryData) => {
+    const defaultPlayerIndex = players.findIndex(p => /^Player \d+$/.test(p.name));
+    if (defaultPlayerIndex !== -1) {
+      const newPlayers = [...players];
+      newPlayers[defaultPlayerIndex] = {
+        ...newPlayers[defaultPlayerIndex],
+        name: historyItem.name,
+        rank: historyItem.rank,
+        tier: historyItem.tier,
+        preferredRoles: [...historyItem.preferredRoles]
+      };
+      setPlayers(newPlayers);
+    } else {
+      alert(t.noEmptyPlayerSlot || '空きのプレイヤー枠がありません。');
+    }
   };
 
   const toggleConfig = (key: keyof RandomizerConfig) => {
@@ -252,51 +316,81 @@ export default function Page() {
         {screen === 'setup' && (
           <div className="space-y-4 md:space-y-6 animate-slide-up overflow-y-auto pb-10">
             <section className="bg-val-blue border-l-4 border-val-red p-4 md:p-6">
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="text-xl md:text-2xl font-bold uppercase italic flex items-center gap-2">
+              <div 
+                className="flex justify-between items-center cursor-pointer group" 
+                onClick={() => setIsRulesExpanded(!isRulesExpanded)}
+              >
+                <h2 className="text-xl md:text-2xl font-bold uppercase italic flex items-center gap-2 group-hover:text-val-red transition-colors">
                   <Settings2 className="text-val-red w-6 h-6" /> {t.rules}
+                  <ChevronDown className={`w-5 h-5 text-val-gray transition-transform duration-300 ${isRulesExpanded ? 'rotate-180' : ''}`} />
                 </h2>
                 <button 
-                  onClick={() => { setScreen('advanced'); setActiveTab('adv-rank'); window.scrollTo({ top: 0 }); }}
+                  onClick={(e) => { e.stopPropagation(); setScreen('advanced'); setActiveTab('adv-rank'); window.scrollTo({ top: 0 }); }}
                   className="bg-val-gray/20 hover:bg-val-gray/40 text-val-light px-4 py-2 rounded text-sm md:text-base flex items-center gap-2 transition-colors border border-val-gray/30"
                 >
                   <SlidersHorizontal className="w-5 h-5 text-val-red" /> {t.advancedSettings}
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
-                  <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryTeam}</h3>
-                  {renderToggle('autoTeams', t.autoTeams)}
-                  {config.autoTeams && (
-                    <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
-                      {renderToggle('useRanks', t.useRanks)}
-                    </div>
-                  )}
-                </div>
+              {isRulesExpanded && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5 animate-fade-in">
+                  <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
+                    <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryTeam}</h3>
+                    {renderToggle('autoTeams', t.autoTeams)}
+                    {config.autoTeams && (
+                      <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
+                        {renderToggle('useRanks', t.useRanks)}
+                      </div>
+                    )}
+                  </div>
 
-                <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
-                  <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryAgent}</h3>
-                  {renderToggle('restrictAgents', t.restrictAgents)}
-                  {config.restrictAgents && (
-                    <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
-                      {renderToggle('allowDuplicateAgents', t.allowDuplicateAgents)}
-                    </div>
-                  )}
-                  {renderToggle('restrictRoles', t.restrictRoles)}
-                </div>
+                  <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
+                    <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryAgent}</h3>
+                    {renderToggle('restrictAgents', t.restrictAgents)}
+                    {config.restrictAgents && (
+                      <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
+                        {renderToggle('allowDuplicateAgents', t.allowDuplicateAgents)}
+                      </div>
+                    )}
+                    {renderToggle('restrictRoles', t.restrictRoles)}
+                  </div>
 
-                <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
-                  <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryWeapon}</h3>
-                  {renderToggle('restrictWeapons', t.restrictWeapons)}
-                  {config.restrictWeapons && (
-                    <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
-                      {renderToggle('restrictWeaponCombinations', t.restrictWeaponCombinations)}
-                    </div>
-                  )}
+                  <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
+                    <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryWeapon}</h3>
+                    {renderToggle('restrictWeapons', t.restrictWeapons)}
+                    {config.restrictWeapons && (
+                      <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
+                        {renderToggle('restrictWeaponCombinations', t.restrictWeaponCombinations)}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </section>
+
+            {playerHistory.length > 0 && (
+              <section className="bg-val-dark p-3 md:p-4 border-l-4 border-val-gray rounded shadow-md">
+                <h3 className="text-sm md:text-base font-bold uppercase italic text-val-gray mb-3 flex items-center gap-2">
+                  <History className="w-4 h-4 md:w-5 md:h-5" /> {t.playerHistory || 'Player History'}
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden">
+                  {playerHistory
+                    .filter(h => !players.some(p => p.name === h.name))
+                    .map(h => (
+                      <button
+                        key={h.name}
+                        onClick={() => handleAddFromHistory(h)}
+                        className="whitespace-nowrap px-4 py-2 bg-black/40 hover:bg-val-red/80 border border-val-gray/30 hover:border-val-red rounded text-sm md:text-base font-bold transition-all text-val-light"
+                      >
+                        {h.name}
+                      </button>
+                    ))}
+                  {playerHistory.filter(h => !players.some(p => p.name === h.name)).length === 0 && (
+                    <span className="text-val-gray text-xs md:text-sm italic px-2">{t.allHistoryPlayersAdded || 'All history players are added.'}</span>
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className="bg-val-blue border-l-4 border-val-gray p-4 md:p-6">
               <div className="mb-5">

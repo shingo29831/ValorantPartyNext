@@ -429,14 +429,16 @@ export default function Page() {
               )}
             </section>
 
-            {/* なぜ: チーム生成ボタンがヘッダーの右上だと分かりづらいため、ルール設定の直下に大きく配置してフローを改善 */}
-            <button 
-              onClick={handleGenerate}
-              className="w-full bg-val-red hover:bg-red-600 text-white py-4 md:py-6 rounded shadow-lg font-bold text-xl md:text-3xl uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.99] flex justify-center items-center gap-3 animate-pulse border-2 border-red-400/50"
-            >
-              <Swords className="w-6 h-6 md:w-8 md:h-8" />
-              {t.generate}
-            </button>
+            {/* なぜ: 視認性を保ちつつ、大きすぎない適切なサイズの生成ボタンを中央に配置するため */}
+            <div className="flex justify-center my-4 md:my-6">
+              <button 
+                onClick={handleGenerate}
+                className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 max-w-md bg-val-red hover:bg-red-600 text-white py-3 md:py-4 rounded shadow-lg font-bold text-lg md:text-xl uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex justify-center items-center gap-3 animate-pulse border border-red-400/50"
+              >
+                <Swords className="w-5 h-5 md:w-6 md:h-6" />
+                {t.generate}
+              </button>
+            </div>
 
             {playerHistory.length > 0 && (
               <section className="bg-val-dark p-3 md:p-4 border-l-4 border-val-gray rounded shadow-md">

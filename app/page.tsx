@@ -49,6 +49,19 @@ interface PlayerHistoryData {
   preferredRoles: Role[];
 }
 
+const TEAM_COLORS = [
+  { border: 'border-blue-500', bg: 'bg-blue-900/10', header: 'text-blue-400', line: 'from-blue-500/50' },
+  { border: 'border-val-red', bg: 'bg-red-900/10', header: 'text-val-red', line: 'from-val-red/50' },
+  { border: 'border-yellow-500', bg: 'bg-yellow-900/10', header: 'text-yellow-400', line: 'from-yellow-500/50' },
+  { border: 'border-green-500', bg: 'bg-green-900/10', header: 'text-green-400', line: 'from-green-500/50' },
+  { border: 'border-purple-500', bg: 'bg-purple-900/10', header: 'text-purple-400', line: 'from-purple-500/50' },
+  { border: 'border-pink-500', bg: 'bg-pink-900/10', header: 'text-pink-400', line: 'from-pink-500/50' },
+  { border: 'border-orange-500', bg: 'bg-orange-900/10', header: 'text-orange-400', line: 'from-orange-500/50' },
+  { border: 'border-teal-500', bg: 'bg-teal-900/10', header: 'text-teal-400', line: 'from-teal-500/50' },
+  { border: 'border-indigo-500', bg: 'bg-indigo-900/10', header: 'text-indigo-400', line: 'from-indigo-500/50' },
+  { border: 'border-cyan-500', bg: 'bg-cyan-900/10', header: 'text-cyan-400', line: 'from-cyan-500/50' },
+];
+
 export default function Page() {
   const [screen, setScreen] = useState<ScreenState>('setup');
   const [lang, setLang] = useState<Language>('ja');
@@ -140,11 +153,12 @@ export default function Page() {
       console.error(e);
     }
 
-    const matchResult = generateMatch(activePlayers, config, advanced);
+    const matchResult = generateMatch(activePlayers, config, advanced, teamCount);
 
     if (!config.restrictAgents && !config.restrictRoles) {
-      matchResult.team1.forEach(p => { p.role = undefined; });
-      matchResult.team2.forEach(p => { p.role = undefined; });
+      Object.values(matchResult.teams).forEach(team => {
+        team.forEach(p => { p.role = undefined; });
+      });
     }
 
     setResult(matchResult);
@@ -257,7 +271,6 @@ export default function Page() {
     }));
   };
 
-  // なぜ: チーム数や人数が変更された際に、全体のプレイヤー枠数を動的に増減し、所属チームを再割り当てするため
   const updatePlayerSlots = (newTeamCount: number, newPlayersPerTeam: number) => {
     const targetPlayerCount = newTeamCount * newPlayersPerTeam;
     setPlayers(prev => {
@@ -315,16 +328,6 @@ export default function Page() {
       <span className="uppercase text-sm md:text-base tracking-wider group-hover:text-val-red transition-colors whitespace-nowrap">{label}</span>
     </label>
   );
-
-  const allPlayers = result ? [...result.team1, ...result.team2] : [];
-  const defenders = allPlayers.filter(p => p.assignedSide === 'Defender');
-  const attackers = allPlayers.filter(p => p.assignedSide === 'Attacker');
-
-  const defenderTeamName = result?.team1Side === 'Defender' ? t.team1 : t.team2;
-  const attackerTeamName = result?.team1Side === 'Attacker' ? t.team1 : t.team2;
-
-  const defenderWeight = defenders.reduce((sum, p) => sum + getRankWeight(p.rank, p.tier), 0);
-  const attackerWeight = attackers.reduce((sum, p) => sum + getRankWeight(p.rank, p.tier), 0);
 
   return (
     <div className="min-h-screen bg-val-dark text-val-light font-sans selection:bg-val-red selection:text-white flex flex-col relative">
@@ -778,49 +781,58 @@ export default function Page() {
             )}
 
             <div className="flex-1 flex flex-col relative min-h-0 gap-6 md:gap-8">
-              <div className="flex-1 bg-blue-900/10 border-t-2 border-blue-500 p-2 md:p-3 relative overflow-hidden shadow-lg flex flex-col min-h-0 rounded-b items-start">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none"><Shield className="w-80 h-80" /></div>
-                <div className="flex items-center gap-4 mb-2 relative z-10 pl-2 shrink-0 w-full">
-                  <h2 className="text-xl md:text-2xl font-bold uppercase italic tracking-tighter text-blue-400 flex items-center gap-3">
-                    {t.defenders}
-                    {!config.autoTeams && <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{defenderTeamName}]</span>}
-                  </h2>
-                  {config.useRanks && config.autoTeams && (
-                    <span className="bg-blue-900/40 text-blue-300 px-3 py-1 rounded text-sm md:text-base border border-blue-500/30">
-                      {t.teamWeight.replace('{weight}', String(defenderWeight))}
-                    </span>
-                  )}
-                  <div className="h-0.5 flex-1 bg-linear-to-r from-blue-500/50 to-transparent"></div>
-                </div>
-                {/* なぜ: 人数が5人を超える場合も折り返してきれいに表示できるようにするため */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 relative z-10 w-full">
-                  {defenders.map(p => <PlayerCard key={p.id} player={p} isDefender={true} t={t} />)}
-                </div>
-              </div>
+              {Object.keys(result.teams).map((teamKey, index) => {
+                const teamPlayers = result.teams[teamKey];
+                const side = result.sides?.[teamKey];
+                const isDefender = side === 'Defender';
+                
+                const color = teamCount === 2 
+                  ? (isDefender ? TEAM_COLORS[0] : TEAM_COLORS[1]) 
+                  : TEAM_COLORS[index % TEAM_COLORS.length];
+                
+                const title = side 
+                  ? (isDefender ? t.defenders : t.attackers) 
+                  : (t[teamKey.replace(' ', '').toLowerCase()] || teamKey);
 
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
-                <div className="bg-val-dark px-5 py-2 border-2 border-val-red text-val-red font-bold text-xl md:text-2xl italic shadow-2xl -skew-x-10"><div className="skew-x-10">{t.vs || 'VS'}</div></div>
-              </div>
+                const teamWeight = teamPlayers.reduce((sum, p) => sum + getRankWeight(p.rank, p.tier), 0);
 
-              <div className="flex-1 bg-red-900/10 border-t-2 border-val-red p-2 md:p-3 relative overflow-hidden shadow-lg flex flex-col min-h-0 rounded-b items-start">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none"><Swords className="w-80 h-80" /></div>
-                <div className="flex items-center gap-4 mb-2 relative z-10 pl-2 shrink-0 w-full">
-                  <h2 className="text-xl md:text-2xl font-bold uppercase italic tracking-tighter text-val-red flex items-center gap-3">
-                    {t.attackers}
-                    {!config.autoTeams && <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{attackerTeamName}]</span>}
-                  </h2>
-                  {config.useRanks && config.autoTeams && (
-                    <span className="bg-red-900/40 text-val-red px-3 py-1 rounded text-sm md:text-base border border-val-red/30">
-                      {t.teamWeight.replace('{weight}', String(attackerWeight))}
-                    </span>
-                  )}
-                  <div className="h-0.5 flex-1 bg-linear-to-r from-val-red/50 to-transparent"></div>
-                </div>
-                {/* なぜ: 人数が5人を超える場合も折り返してきれいに表示できるようにするため */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 relative z-10 w-full">
-                  {attackers.map(p => <PlayerCard key={p.id} player={p} isDefender={false} t={t} />)}
-                </div>
-              </div>
+                return (
+                  <React.Fragment key={teamKey}>
+                    {index > 0 && teamCount === 2 && (
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
+                        <div className="bg-val-dark px-5 py-2 border-2 border-val-red text-val-red font-bold text-xl md:text-2xl italic shadow-2xl -skew-x-10">
+                          <div className="skew-x-10">{t.vs || 'VS'}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={`flex-1 ${color.bg} border-t-2 ${color.border} p-2 md:p-3 relative overflow-hidden shadow-lg flex flex-col min-h-0 rounded-b items-start`}>
+                      {teamCount === 2 && (
+                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+                           {isDefender ? <Shield className="w-80 h-80" /> : <Swords className="w-80 h-80" />}
+                         </div>
+                      )}
+                      <div className="flex items-center gap-4 mb-2 relative z-10 pl-2 shrink-0 w-full">
+                        <h2 className={`text-xl md:text-2xl font-bold uppercase italic tracking-tighter ${color.header} flex items-center gap-3`}>
+                          {title}
+                          {!config.autoTeams && teamCount === 2 && (
+                            <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{t[teamKey.replace(' ', '').toLowerCase()] || teamKey}]</span>
+                          )}
+                        </h2>
+                        {config.useRanks && config.autoTeams && (
+                          <span className={`${color.bg} ${color.header} px-3 py-1 rounded text-sm md:text-base border ${color.border}/30`}>
+                            {t.teamWeight.replace('{weight}', String(teamWeight))}
+                          </span>
+                        )}
+                        <div className={`h-0.5 flex-1 bg-linear-to-r ${color.line} to-transparent`}></div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 relative z-10 w-full">
+                        {teamPlayers.map(p => <PlayerCard key={p.id} player={p} isDefender={isDefender} t={t} />)}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}

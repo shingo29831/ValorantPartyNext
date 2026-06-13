@@ -1,6 +1,6 @@
 // src/logic/randomizer.ts
 // AI Role: コアロジックの提供
-// 役割: アイテム抽選のデフォルト重みを10に変更。また、チーム内でのエージェント重複を防止する設定を追加。
+// 役割: チーム数に応じたプレイヤーの振り分けロジック、および3チーム以上のサポート
 
 import { Player, PlayerResult, RandomizerConfig, AdvancedConfig, Rank, Tier, Team, Side, MatchResult } from '../types';
 import { MAIN_WEAPONS, SUB_WEAPONS, AGENTS, ROLES, AGENT_ROLES, MAPS } from '../constants/valorant';
@@ -17,34 +17,63 @@ export const getRankWeight = (rank: Rank, tier: Tier): number => {
   return rankScores[rank] + (tier - 1) * 3;
 };
 
-const balanceTeams = (players: Player[], maxDiff: number): { team1: Player[]; team2: Player[] } => {
-  let bestTeam1: Player[] = [];
-  let bestTeam2: Player[] = [];
+const balanceTeams = (players: Player[], maxDiff: number, teamCount: number): Record<string, Player[]> => {
+  let bestTeams: Record<string, Player[]> = {};
   let minDiff = Infinity;
 
-  for (let i = 0; i < 100; i++) {
+  for (let iter = 0; iter < 100; iter++) {
     const shuffled = [...players].sort(() => 0.5 - Math.random());
-    const t1: Player[] = [];
-    const t2: Player[] = [];
-    let w1 = 0;
-    let w2 = 0;
-
-    for (const p of shuffled) {
-      const pWeight = getRankWeight(p.rank, p.tier);
-      if (t1.length < Math.ceil(players.length / 2) && (w1 <= w2 || t2.length >= Math.floor(players.length / 2))) {
-        t1.push(p);
-        w1 += pWeight;
-      } else {
-        t2.push(p);
-        w2 += pWeight;
-      }
+    const tempTeams: Record<string, Player[]> = {};
+    const tempWeights: Record<string, number> = {};
+    
+    for (let i = 1; i <= teamCount; i++) {
+      tempTeams[`Team ${i}`] = [];
+      tempWeights[`Team ${i}`] = 0;
     }
 
-    const diff = Math.abs(w1 - w2);
+    const flexiblePlayers: Player[] = [];
+    shuffled.forEach(p => {
+      if (p.fixedTeam && tempTeams[p.fixedTeam]) {
+        tempTeams[p.fixedTeam].push(p);
+        tempWeights[p.fixedTeam] += getRankWeight(p.rank, p.tier);
+      } else {
+        flexiblePlayers.push(p);
+      }
+    });
+
+    const maxPlayersPerTeam = Math.ceil(players.length / teamCount);
+
+    for (const p of flexiblePlayers) {
+      const pWeight = getRankWeight(p.rank, p.tier);
+      const availableTeams = Object.keys(tempTeams).filter(t => tempTeams[t].length < maxPlayersPerTeam);
+      
+      if (availableTeams.length === 0) {
+        const anyTeam = Object.keys(tempTeams)[0];
+        tempTeams[anyTeam].push(p);
+        tempWeights[anyTeam] += pWeight;
+        continue;
+      }
+
+      let targetTeam = availableTeams[0];
+      let minW = tempWeights[targetTeam];
+      for (let i = 1; i < availableTeams.length; i++) {
+        const t = availableTeams[i];
+        if (tempWeights[t] < minW) {
+          targetTeam = t;
+          minW = tempWeights[t];
+        }
+      }
+
+      tempTeams[targetTeam].push(p);
+      tempWeights[targetTeam] += pWeight;
+    }
+
+    const weights = Object.values(tempWeights);
+    const diff = Math.max(...weights) - Math.min(...weights);
+
     if (diff < minDiff) {
       minDiff = diff;
-      bestTeam1 = t1;
-      bestTeam2 = t2;
+      bestTeams = tempTeams;
     }
 
     if (minDiff <= maxDiff) {
@@ -52,7 +81,7 @@ const balanceTeams = (players: Player[], maxDiff: number): { team1: Player[]; te
     }
   }
 
-  return { team1: bestTeam1, team2: bestTeam2 };
+  return bestTeams;
 };
 
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -71,35 +100,57 @@ const getWeightedRandomItem = <T extends string>(items: T[], banned: string[], w
   return validItems[validItems.length - 1];
 };
 
-export const generateMatch = (players: Player[], config: RandomizerConfig, advanced: AdvancedConfig): MatchResult => {
-  let team1: Player[] = [];
-  let team2: Player[] = [];
+export const generateMatch = (players: Player[], config: RandomizerConfig, advanced: AdvancedConfig, teamCount: number): MatchResult => {
+  let teams: Record<string, Player[]> = {};
 
   if (!config.autoTeams) {
-    team1 = players.filter(p => p.fixedTeam === 'Team 1');
-    team2 = players.filter(p => p.fixedTeam === 'Team 2');
+    for (let i = 1; i <= teamCount; i++) {
+      teams[`Team ${i}`] = players.filter(p => p.fixedTeam === `Team ${i}`);
+    }
   } else if (config.useRanks) {
-    const balanced = balanceTeams(players, advanced.maxRankWeightDifference);
-    team1 = balanced.team1;
-    team2 = balanced.team2;
+    teams = balanceTeams(players, advanced.maxRankWeightDifference, teamCount);
   } else {
+    for (let i = 1; i <= teamCount; i++) {
+      teams[`Team ${i}`] = [];
+    }
     const shuffled = [...players].sort(() => 0.5 - Math.random());
-    const half = Math.ceil(shuffled.length / 2);
-    team1 = shuffled.slice(0, half);
-    team2 = shuffled.slice(half);
+    
+    const flexiblePlayers: Player[] = [];
+    shuffled.forEach(p => {
+      if (p.fixedTeam && teams[p.fixedTeam]) {
+        teams[p.fixedTeam].push(p);
+      } else {
+        flexiblePlayers.push(p);
+      }
+    });
+
+    const maxPlayersPerTeam = Math.ceil(players.length / teamCount);
+    for (const p of flexiblePlayers) {
+      const availableTeams = Object.keys(teams).filter(t => teams[t].length < maxPlayersPerTeam);
+      const targetTeam = availableTeams.length > 0 ? availableTeams[0] : Object.keys(teams)[0];
+      teams[targetTeam].push(p);
+    }
   }
 
-  const isTeam1Attacker = Math.random() > 0.5;
-  const team1Side: Side = isTeam1Attacker ? 'Attacker' : 'Defender';
-  const team2Side: Side = isTeam1Attacker ? 'Defender' : 'Attacker';
+  let sides: Record<string, Side> | undefined = undefined;
+  if (teamCount === 2) {
+    const isTeam1Attacker = Math.random() > 0.5;
+    sides = {
+      'Team 1': isTeam1Attacker ? 'Attacker' : 'Defender',
+      'Team 2': isTeam1Attacker ? 'Defender' : 'Attacker'
+    };
+  }
 
   const selectedMap = getWeightedRandomItem(MAPS, advanced.bannedMaps, advanced.mapWeights);
 
-  const team1UsedAgents = new Set<string>();
-  const team2UsedAgents = new Set<string>();
+  const usedAgentsByTeam: Record<string, Set<string>> = {};
+  for (let i = 1; i <= teamCount; i++) {
+    usedAgentsByTeam[`Team ${i}`] = new Set<string>();
+  }
 
-  const mapToResult = (p: Player, team: Team, side: Side, usedAgents: Set<string>): PlayerResult => {
-    const res: PlayerResult = { ...p, assignedTeam: team, assignedSide: side };
+  const mapToResult = (p: Player, teamName: string, side?: Side): PlayerResult => {
+    const res: PlayerResult = { ...p, assignedTeam: teamName, assignedSide: side };
+    const usedAgents = usedAgentsByTeam[teamName] || new Set<string>();
 
     if (config.restrictRoles) {
       res.role = getRandomItem(ROLES);
@@ -145,11 +196,15 @@ export const generateMatch = (players: Player[], config: RandomizerConfig, advan
     return res;
   };
 
+  const resultTeams: Record<string, PlayerResult[]> = {};
+  for (const teamKey of Object.keys(teams)) {
+    const teamSide = sides ? sides[teamKey] : undefined;
+    resultTeams[teamKey] = teams[teamKey].map(p => mapToResult(p, teamKey, teamSide));
+  }
+
   return {
     map: selectedMap,
-    team1Side,
-    team2Side,
-    team1: team1.map(p => mapToResult(p, 'Team 1', team1Side, team1UsedAgents)),
-    team2: team2.map(p => mapToResult(p, 'Team 2', team2Side, team2UsedAgents)),
+    teams: resultTeams,
+    sides
   };
 };

@@ -1,6 +1,6 @@
 // src/types.ts
 // AI Role: 型定義の提供
-// 役割: アプリケーション全体で利用するデータ構造の定義。Team型をstringに変更し動的なチーム数に対応
+// 役割: アプリケーション全体で利用するデータ構造の定義。動的チーム数と複数チーム結果に対応
 
 export type Team = string;
 export type Side = 'Attacker' | 'Defender';
@@ -19,7 +19,7 @@ export interface Player {
 
 export interface PlayerResult extends Player {
   assignedTeam: Team;
-  assignedSide: Side;
+  assignedSide?: Side; // 3チーム以上の場合は未定義となる
   mainWeapon?: string;
   subWeapon?: string;
   agent?: string;
@@ -49,8 +49,6 @@ export interface AdvancedConfig {
 
 export interface MatchResult {
   map?: string;
-  team1: PlayerResult[];
-  team2: PlayerResult[];
-  team1Side: Side;
-  team2Side: Side;
+  teams: Record<string, PlayerResult[]>;
+  sides?: Record<string, Side>; // 2チームの場合のみ保持される
 }

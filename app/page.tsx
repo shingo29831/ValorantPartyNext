@@ -156,7 +156,6 @@ export default function Page() {
     const availableMaps = MAPS.filter(m => !advanced.bannedMaps.includes(m));
     if (availableMaps.length === 0) return;
 
-    // なぜ: BANされていないマップの中から、詳細設定の重みを考慮してランダムに再選出するため
     const weights = availableMaps.map(m => advanced.mapWeights[m] ?? 10);
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
     let random = Math.random() * totalWeight;
@@ -454,14 +453,16 @@ export default function Page() {
                 </div>
                 <div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20">
                   <span className="font-bold text-val-gray text-sm md:text-base">{t.teamCount || 'Team Count'}:</span>
-                  <input
-                    type="number"
-                    min="2"
-                    max="10"
+                  {/* なぜ: 直接入力ではなくドロップダウンリストで選択できるようにするため */}
+                  <select
                     value={teamCount}
-                    onChange={(e) => handleTeamCountChange(parseInt(e.target.value) || 2)}
-                    className="bg-black/50 text-val-light px-3 py-1 rounded border border-val-gray/40 w-16 md:w-20 outline-none focus:border-val-red text-center"
-                  />
+                    onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
+                    className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -733,7 +734,6 @@ export default function Page() {
                   <span className="text-[10px] md:text-sm text-val-gray font-bold uppercase tracking-widest mb-1">{t.map}</span>
                   <span className="text-2xl md:text-5xl text-white font-bold uppercase tracking-tighter italic drop-shadow-md">{t[result.map] || result.map}</span>
                 </div>
-                {/* なぜ: 生成されたチーム状態を維持したまま、マップのみを即座に再抽選できるようにするため */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 md:pr-8 z-10">
                   <button 
                     onClick={handleRerollMap}

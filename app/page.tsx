@@ -50,16 +50,16 @@ interface PlayerHistoryData {
 }
 
 const TEAM_COLORS = [
-  { border: 'border-blue-500', bg: 'bg-blue-900/10', header: 'text-blue-400', line: 'from-blue-500/50' },
-  { border: 'border-val-red', bg: 'bg-red-900/10', header: 'text-val-red', line: 'from-val-red/50' },
-  { border: 'border-yellow-500', bg: 'bg-yellow-900/10', header: 'text-yellow-400', line: 'from-yellow-500/50' },
-  { border: 'border-green-500', bg: 'bg-green-900/10', header: 'text-green-400', line: 'from-green-500/50' },
-  { border: 'border-purple-500', bg: 'bg-purple-900/10', header: 'text-purple-400', line: 'from-purple-500/50' },
-  { border: 'border-pink-500', bg: 'bg-pink-900/10', header: 'text-pink-400', line: 'from-pink-500/50' },
-  { border: 'border-orange-500', bg: 'bg-orange-900/10', header: 'text-orange-400', line: 'from-orange-500/50' },
-  { border: 'border-teal-500', bg: 'bg-teal-900/10', header: 'text-teal-400', line: 'from-teal-500/50' },
-  { border: 'border-indigo-500', bg: 'bg-indigo-900/10', header: 'text-indigo-400', line: 'from-indigo-500/50' },
-  { border: 'border-cyan-500', bg: 'bg-cyan-900/10', header: 'text-cyan-400', line: 'from-cyan-500/50' },
+  { border: 'border-blue-500', borderAlpha: 'border-blue-500/30', bg: 'bg-blue-900/10', header: 'text-blue-400', line: 'from-blue-500/50' },
+  { border: 'border-val-red', borderAlpha: 'border-val-red/30', bg: 'bg-red-900/10', header: 'text-val-red', line: 'from-val-red/50' },
+  { border: 'border-yellow-500', borderAlpha: 'border-yellow-500/30', bg: 'bg-yellow-900/10', header: 'text-yellow-400', line: 'from-yellow-500/50' },
+  { border: 'border-green-500', borderAlpha: 'border-green-500/30', bg: 'bg-green-900/10', header: 'text-green-400', line: 'from-green-500/50' },
+  { border: 'border-purple-500', borderAlpha: 'border-purple-500/30', bg: 'bg-purple-900/10', header: 'text-purple-400', line: 'from-purple-500/50' },
+  { border: 'border-pink-500', borderAlpha: 'border-pink-500/30', bg: 'bg-pink-900/10', header: 'text-pink-400', line: 'from-pink-500/50' },
+  { border: 'border-orange-500', borderAlpha: 'border-orange-500/30', bg: 'bg-orange-900/10', header: 'text-orange-400', line: 'from-orange-500/50' },
+  { border: 'border-teal-500', borderAlpha: 'border-teal-500/30', bg: 'bg-teal-900/10', header: 'text-teal-400', line: 'from-teal-500/50' },
+  { border: 'border-indigo-500', borderAlpha: 'border-indigo-500/30', bg: 'bg-indigo-900/10', header: 'text-indigo-400', line: 'from-indigo-500/50' },
+  { border: 'border-cyan-500', borderAlpha: 'border-cyan-500/30', bg: 'bg-cyan-900/10', header: 'text-cyan-400', line: 'from-cyan-500/50' },
 ];
 
 export default function Page() {
@@ -504,10 +504,13 @@ export default function Page() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
                   {Array.from({ length: teamCount }).map((_, teamIdx) => {
                     const teamNum = teamIdx + 1;
-                    const isOdd = teamNum % 2 !== 0;
+                    const color = teamCount === 2 
+                      ? (teamIdx === 0 ? TEAM_COLORS[0] : TEAM_COLORS[1]) 
+                      : TEAM_COLORS[teamIdx % TEAM_COLORS.length];
+
                     return (
                       <div key={`team-${teamNum}`}>
-                        <h3 className={`text-xl font-bold mb-4 border-b pb-2 flex justify-between items-end ${isOdd ? 'text-blue-400 border-blue-500/30' : 'text-val-red border-val-red/30'}`}>
+                        <h3 className={`text-xl font-bold mb-4 border-b pb-2 flex justify-between items-end ${color.header} ${color.borderAlpha}`}>
                           {t[`team${teamNum}`] || `Team ${teamNum}`}
                           <span className="text-sm font-normal text-val-light opacity-60">
                             {players.filter(p => p.fixedTeam === `Team ${teamNum}`).length} {t.playerCount}

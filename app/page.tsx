@@ -440,7 +440,7 @@ export default function Page() {
             {playerHistory.length > 0 && (
               <section className="bg-val-dark p-3 md:p-4 border-l-4 border-val-gray rounded shadow-md">
                 <h3 className="text-sm md:text-base font-bold uppercase italic text-val-gray mb-3 flex items-center gap-2">
-                  <History className="w-4 h-4 md:w-5 md:h-5" /> {t.playerHistory || 'Player History'}
+                  <History className="w-4 h-4 md:w-5 md:h-5" /> {t.playerHistory || (lang === 'ja' ? 'プレイヤー履歴' : 'Player History')}
                 </h3>
                 <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden">
                   {playerHistory
@@ -455,7 +455,9 @@ export default function Page() {
                       </button>
                     ))}
                   {playerHistory.filter(h => !players.some(p => p.name === h.name)).length === 0 && (
-                    <span className="text-val-gray text-xs md:text-sm italic px-2">{t.allHistoryPlayersAdded || 'All history players are added.'}</span>
+                    <span className="text-val-gray text-xs md:text-sm italic px-2">
+                      {t.allHistoryPlayersAdded || (lang === 'ja' ? 'すべての履歴プレイヤーが追加されました。' : 'All history players are added.')}
+                    </span>
                   )}
                 </div>
               </section>
@@ -473,7 +475,9 @@ export default function Page() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20 shrink-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-val-gray text-sm md:text-base">{t.teamCount || 'Team Count'}:</span>
+                    <span className="font-bold text-val-gray text-sm md:text-base">
+                      {t.teamCount || (lang === 'ja' ? 'チーム数' : 'Team Count')}:
+                    </span>
                     <select
                       value={teamCount}
                       onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
@@ -486,7 +490,9 @@ export default function Page() {
                   </div>
                   <div className="w-px h-6 bg-val-gray/40 hidden sm:block"></div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-val-gray text-sm md:text-base">{t.playersPerTeam || 'Players per Team'}:</span>
+                    <span className="font-bold text-val-gray text-sm md:text-base">
+                      {t.playersPerTeam || (lang === 'ja' ? 'チーム人数' : 'Players per Team')}:
+                    </span>
                     <select
                       value={playersPerTeam}
                       onChange={(e) => handlePlayersPerTeamChange(parseInt(e.target.value))}
@@ -511,7 +517,7 @@ export default function Page() {
                     return (
                       <div key={`team-${teamNum}`}>
                         <h3 className={`text-xl font-bold mb-4 border-b pb-2 flex justify-between items-end ${color.header} ${color.borderAlpha}`}>
-                          {t[`team${teamNum}`] || `Team ${teamNum}`}
+                          {t[`team${teamNum}`] || (lang === 'ja' ? `チーム ${teamNum}` : `Team ${teamNum}`)}
                           <span className="text-sm font-normal text-val-light opacity-60">
                             {players.filter(p => p.fixedTeam === `Team ${teamNum}`).length} {t.playerCount}
                           </span>
@@ -560,7 +566,7 @@ export default function Page() {
 
             <section className="bg-val-dark p-4 md:p-6 border border-val-gray/20 rounded shadow-md overflow-visible">
               <h2 className="text-base md:text-lg font-bold mb-4 uppercase italic text-val-gray flex items-center gap-2">
-                <Ban className="w-5 h-5" /> {t.quickBansWeights || 'Quick Bans & Weights'}
+                <Ban className="w-5 h-5" /> {t.quickBansWeights || (lang === 'ja' ? 'クイックBAN & 重み設定' : 'Quick Bans & Weights')}
               </h2>
               <div className="space-y-8">
                 <QuickBanCarousel title={t.mapSettings} items={MAPS} category="maps" bannedList={advanced.bannedMaps} weights={advanced.mapWeights} onToggle={(item) => toggleBan('bannedMaps', item)} onUpdateWeight={(item, weight) => updateWeight('mapWeights', item, weight)} t={t} />
@@ -795,7 +801,7 @@ export default function Page() {
                 
                 const title = side 
                   ? (isDefender ? t.defenders : t.attackers) 
-                  : (t[teamKey.replace(' ', '').toLowerCase()] || teamKey);
+                  : (t[teamKey.replace(' ', '').toLowerCase()] || (lang === 'ja' ? `チーム ${index + 1}` : teamKey));
 
                 const teamWeight = teamPlayers.reduce((sum, p) => sum + getRankWeight(p.rank, p.tier), 0);
 
@@ -819,7 +825,7 @@ export default function Page() {
                         <h2 className={`text-xl md:text-2xl font-bold uppercase italic tracking-tighter ${color.header} flex items-center gap-3`}>
                           {title}
                           {!config.autoTeams && teamCount === 2 && (
-                            <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{t[teamKey.replace(' ', '').toLowerCase()] || teamKey}]</span>
+                            <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{t[teamKey.replace(' ', '').toLowerCase()] || (lang === 'ja' ? `チーム ${index + 1}` : teamKey)}]</span>
                           )}
                         </h2>
                         {config.useRanks && config.autoTeams && (

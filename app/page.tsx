@@ -360,15 +360,6 @@ export default function Page() {
               <option value="en">EN</option>
             </select>
           </div>
-
-          {screen === 'result' && (
-            <button 
-              onClick={handleGenerate}
-              className="bg-val-gray/20 hover:bg-val-gray/40 text-white px-3 py-1.5 md:px-4 md:py-2 font-bold uppercase tracking-wider transition-colors border border-val-gray/50 flex items-center gap-2 text-xs md:text-sm shrink-0"
-            >
-              <RefreshCw className="w-3 h-3 md:w-4 md:h-4" /> {t.reroll}
-            </button>
-          )}
         </div>
       </header>
 
@@ -428,17 +419,6 @@ export default function Page() {
                 </div>
               )}
             </section>
-
-            {/* なぜ: 視認性を保ちつつ、大きすぎない適切なサイズの生成ボタンを中央に配置するため */}
-            <div className="flex justify-center my-4 md:my-6">
-              <button 
-                onClick={handleGenerate}
-                className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 max-w-md bg-val-red hover:bg-red-600 text-white py-3 md:py-4 rounded shadow-lg font-bold text-lg md:text-xl uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex justify-center items-center gap-3 animate-pulse border border-red-400/50"
-              >
-                <Swords className="w-5 h-5 md:w-6 md:h-6" />
-                {t.generate}
-              </button>
-            </div>
 
             {playerHistory.length > 0 && (
               <section className="bg-val-dark p-3 md:p-4 border-l-4 border-val-gray rounded shadow-md">
@@ -566,6 +546,17 @@ export default function Page() {
                 </div>
               )}
             </section>
+
+            {/* なぜ: チーム構成を確認後、すぐに視界に入るようプレイヤー一覧の直下に大きな生成ボタンを配置 */}
+            <div className="flex justify-center my-6 md:my-8">
+              <button 
+                onClick={handleGenerate}
+                className="w-full sm:w-5/6 md:w-3/4 max-w-3xl bg-val-red hover:bg-red-600 text-white py-4 md:py-5 rounded shadow-lg font-bold text-xl md:text-2xl uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex justify-center items-center gap-3 animate-pulse border-2 border-red-400/50"
+              >
+                <Swords className="w-6 h-6 md:w-8 md:h-8" />
+                {t.generate}
+              </button>
+            </div>
 
             <section className="bg-val-dark p-4 md:p-6 border border-val-gray/20 rounded shadow-md overflow-visible">
               <h2 className="text-base md:text-lg font-bold mb-4 uppercase italic text-val-gray flex items-center gap-2">
@@ -845,6 +836,17 @@ export default function Page() {
                   </React.Fragment>
                 );
               })}
+            </div>
+
+            {/* なぜ: 結果確認後も、同じように目立つボタンですぐにチームを再生成できるようにするため */}
+            <div className="flex justify-center mt-6 md:mt-8 pt-4 pb-8">
+              <button 
+                onClick={handleGenerate}
+                className="w-full sm:w-5/6 md:w-3/4 max-w-3xl bg-val-red hover:bg-red-600 text-white py-4 md:py-5 rounded shadow-lg font-bold text-xl md:text-2xl uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex justify-center items-center gap-3 border-2 border-red-400/50"
+              >
+                <RefreshCw className="w-6 h-6 md:w-8 md:h-8" />
+                {t.reroll}
+              </button>
             </div>
           </div>
         )}

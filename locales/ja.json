@@ -1,5 +1,7 @@
 {
   "title": "Valorant Party",
+  "modeParty": "パーティーモード",
+  "modeTournament": "トーナメントモード",
   "generate": "チーム生成",
   "reroll": "再生成",
   "rules": "ルール設定",

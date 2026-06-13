@@ -1,6 +1,6 @@
 // src/app/page.tsx
 // AI Role: メインUIの提供 (Client Component)
-// 役割: アプリケーション全体のUI構成と状態管理。分割されたコンポーネントを組み合わせ、生成の制御を行う。
+// 役割: アプリケーション全体のUI構成と状態管理。Party/Tournamentモードのビュー切り替えを行う。
 
 "use client";
 
@@ -40,6 +40,7 @@ const INITIAL_COMBINATIONS = MAIN_WEAPONS.reduce((acc, mw) => {
 
 type ScreenState = 'setup' | 'advanced' | 'result';
 type Language = 'ja' | 'en';
+type AppMode = 'party' | 'tournament';
 type AdvancedTab = 'adv-rank' | 'adv-maps' | 'adv-agents' | 'adv-main-weapons' | 'adv-sub-weapons' | 'adv-combos';
 
 interface PlayerHistoryData {
@@ -64,6 +65,7 @@ const TEAM_COLORS = [
 
 export default function Page() {
   const [screen, setScreen] = useState<ScreenState>('setup');
+  const [appMode, setAppMode] = useState<AppMode>('party');
   const [lang, setLang] = useState<Language>('ja');
   const [activeTab, setActiveTab] = useState<AdvancedTab>('adv-rank');
   const [teamCount, setTeamCount] = useState<number>(2);
@@ -113,11 +115,20 @@ export default function Page() {
     }
   }, []);
 
+  // なぜ: モード切り替え時に、Party Modeなら強制的に2チームにリセットするため
+  useEffect(() => {
+    if (appMode === 'party' && teamCount !== 2) {
+      setTeamCount(2);
+      updatePlayerSlots(2, playersPerTeam);
+    }
+  }, [appMode]);
+
   const handleGenerate = () => {
     const activePlayers = players.filter(p => p.name.trim() !== '');
     if (activePlayers.length === 0) return;
     
-    if (config.restrictAgents) {
+    // トーナメントモードの時はエージェント制限のバリデーションを無視
+    if (appMode === 'party' && config.restrictAgents) {
       const validationResult = validateTeamCreation(
         AGENTS.length,
         advanced.bannedAgents.length,
@@ -153,9 +164,14 @@ export default function Page() {
       console.error(e);
     }
 
-    const matchResult = generateMatch(activePlayers, config, advanced, teamCount);
+    const isParty = appMode === 'party';
+    const matchConfig = isParty 
+      ? config 
+      : { ...config, restrictAgents: false, restrictRoles: false, restrictWeapons: false }; // トーナメントモード時は武器/エージェントを無効化
 
-    if (!config.restrictAgents && !config.restrictRoles) {
+    const matchResult = generateMatch(activePlayers, matchConfig, advanced, isParty ? 2 : teamCount);
+
+    if (!matchConfig.restrictAgents && !matchConfig.restrictRoles) {
       Object.values(matchResult.teams).forEach(team => {
         team.forEach(p => { p.role = undefined; });
       });
@@ -343,10 +359,30 @@ export default function Page() {
             </button>
           )}
           <h1 className="text-lg md:text-2xl font-bold tracking-tighter uppercase italic flex items-center gap-1.5 md:gap-2">
-            <Swords className="text-val-red w-4 h-4 md:w-6 md:h-6" />
-            {t.title?.split(' ')[0] || 'Valorant'} <span className="text-val-red">{t.title?.split(' ')[1] || 'Party'}</span>
+            <Swords className="text-val-red w-4 h-4 md:w-6 md:h-6 hidden md:block" />
+            <span className="md:hidden text-val-red">V</span>
+            <span className="hidden md:inline">{t.title?.split(' ')[0] || 'Valorant'}</span>
+            <span className="text-val-red hidden md:inline">{t.title?.split(' ')[1] || 'Party'}</span>
           </h1>
         </div>
+
+        {/* なぜ: モード切り替えを画面上部の目立つ位置に配置するため */}
+        {screen === 'setup' && (
+          <div className="flex bg-black/50 p-1 rounded-lg border border-val-gray/20 shadow-inner">
+            <button
+              onClick={() => setAppMode('party')}
+              className={`px-3 py-1 md:px-5 md:py-1.5 text-xs md:text-sm font-bold rounded transition-all ${appMode === 'party' ? 'bg-val-red text-white shadow-md' : 'text-val-gray hover:text-white hover:bg-white/5'}`}
+            >
+              {t.modeParty || 'Party Mode'}
+            </button>
+            <button
+              onClick={() => setAppMode('tournament')}
+              className={`px-3 py-1 md:px-5 md:py-1.5 text-xs md:text-sm font-bold rounded transition-all ${appMode === 'tournament' ? 'bg-val-red text-white shadow-md' : 'text-val-gray hover:text-white hover:bg-white/5'}`}
+            >
+              {t.modeTournament || 'Tournament Mode'}
+            </button>
+          </div>
+        )}
         
         <div className="flex items-center gap-3 md:gap-6">
           <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded border border-val-gray/20">
@@ -396,26 +432,31 @@ export default function Page() {
                     )}
                   </div>
 
-                  <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
-                    <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryAgent}</h3>
-                    {renderToggle('restrictAgents', t.restrictAgents)}
-                    {config.restrictAgents && (
-                      <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
-                        {renderToggle('allowDuplicateAgents', t.allowDuplicateAgents)}
+                  {/* なぜ: トーナメントモードの時はエージェント制限・武器制限は不要なため非表示にしてすっきりさせる */}
+                  {appMode === 'party' && (
+                    <>
+                      <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
+                        <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryAgent}</h3>
+                        {renderToggle('restrictAgents', t.restrictAgents)}
+                        {config.restrictAgents && (
+                          <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
+                            {renderToggle('allowDuplicateAgents', t.allowDuplicateAgents)}
+                          </div>
+                        )}
+                        {renderToggle('restrictRoles', t.restrictRoles)}
                       </div>
-                    )}
-                    {renderToggle('restrictRoles', t.restrictRoles)}
-                  </div>
 
-                  <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
-                    <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryWeapon}</h3>
-                    {renderToggle('restrictWeapons', t.restrictWeapons)}
-                    {config.restrictWeapons && (
-                      <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
-                        {renderToggle('restrictWeaponCombinations', t.restrictWeaponCombinations)}
+                      <div className="bg-val-dark/50 p-4 rounded border border-val-gray/20 flex flex-col gap-3">
+                        <h3 className="text-base md:text-lg font-bold text-val-gray border-b border-val-gray/30 pb-2 mb-1">{t.categoryWeapon}</h3>
+                        {renderToggle('restrictWeapons', t.restrictWeapons)}
+                        {config.restrictWeapons && (
+                          <div className="pl-5 ml-2 border-l-2 border-val-gray/30 flex flex-col gap-3">
+                            {renderToggle('restrictWeaponCombinations', t.restrictWeaponCombinations)}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
             </section>
@@ -457,21 +498,26 @@ export default function Page() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-val-gray text-sm md:text-base">
-                      {t.teamCount || (lang === 'ja' ? 'チーム数' : 'Team Count')}:
-                    </span>
-                    <select
-                      value={teamCount}
-                      onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
-                      className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
-                    >
-                      {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                        <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="w-px h-6 bg-val-gray/40 hidden sm:block"></div>
+                  {/* なぜ: Party Modeの場合はチーム数が常に2固定となるため、選択UIを隠す */}
+                  {appMode === 'tournament' && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-val-gray text-sm md:text-base">
+                          {t.teamCount || (lang === 'ja' ? 'チーム数' : 'Team Count')}:
+                        </span>
+                        <select
+                          value={teamCount}
+                          onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
+                          className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
+                        >
+                          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                            <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-px h-6 bg-val-gray/40 hidden sm:block"></div>
+                    </>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-val-gray text-sm md:text-base">
                       {t.playersPerTeam || (lang === 'ja' ? 'チーム人数' : 'Players per Team')}:
@@ -491,9 +537,9 @@ export default function Page() {
 
               {!config.autoTeams ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
-                  {Array.from({ length: teamCount }).map((_, teamIdx) => {
+                  {Array.from({ length: appMode === 'party' ? 2 : teamCount }).map((_, teamIdx) => {
                     const teamNum = teamIdx + 1;
-                    const color = teamCount === 2 
+                    const color = (appMode === 'party' || teamCount === 2)
                       ? (teamIdx === 0 ? TEAM_COLORS[0] : TEAM_COLORS[1]) 
                       : TEAM_COLORS[teamIdx % TEAM_COLORS.length];
 
@@ -547,7 +593,6 @@ export default function Page() {
               )}
             </section>
 
-            {/* なぜ: チーム構成を確認後、すぐに視界に入るようプレイヤー一覧の直下に大きな生成ボタンを配置 */}
             <div className="flex justify-center my-6 md:my-8">
               <button 
                 onClick={handleGenerate}
@@ -564,9 +609,15 @@ export default function Page() {
               </h2>
               <div className="space-y-8">
                 <QuickBanCarousel title={t.mapSettings} items={MAPS} category="maps" bannedList={advanced.bannedMaps} weights={advanced.mapWeights} onToggle={(item) => toggleBan('bannedMaps', item)} onUpdateWeight={(item, weight) => updateWeight('mapWeights', item, weight)} t={t} />
-                <QuickBanCarousel title={t.agentSettings} items={AGENTS} category="agents" bannedList={advanced.bannedAgents} weights={advanced.agentWeights} onToggle={(item) => toggleBan('bannedAgents', item)} onUpdateWeight={(item, weight) => updateWeight('agentWeights', item, weight)} t={t} />
-                <QuickBanCarousel title={t.mainWeapons || 'MAIN WEAPONS'} items={MAIN_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggle={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, weight) => updateWeight('weaponWeights', item, weight)} t={t} />
-                <QuickBanCarousel title={t.subWeapons || 'SUB WEAPONS'} items={SUB_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggle={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, weight) => updateWeight('weaponWeights', item, weight)} t={t} />
+                
+                {/* なぜ: トーナメントモードの時はエージェントと武器の制限が適用されないため、設定項目も隠す */}
+                {appMode === 'party' && (
+                  <>
+                    <QuickBanCarousel title={t.agentSettings} items={AGENTS} category="agents" bannedList={advanced.bannedAgents} weights={advanced.agentWeights} onToggle={(item) => toggleBan('bannedAgents', item)} onUpdateWeight={(item, weight) => updateWeight('agentWeights', item, weight)} t={t} />
+                    <QuickBanCarousel title={t.mainWeapons || 'MAIN WEAPONS'} items={MAIN_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggle={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, weight) => updateWeight('weaponWeights', item, weight)} t={t} />
+                    <QuickBanCarousel title={t.subWeapons || 'SUB WEAPONS'} items={SUB_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggle={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, weight) => updateWeight('weaponWeights', item, weight)} t={t} />
+                  </>
+                )}
               </div>
             </section>
           </div>
@@ -584,11 +635,11 @@ export default function Page() {
                 {[
                   { id: 'adv-rank', label: t.maxRankDifference },
                   { id: 'adv-maps', label: t.mapSettings },
-                  { id: 'adv-agents', label: t.agentSettings },
-                  { id: 'adv-main-weapons', label: t.mainWeapons || 'MAIN WEAPONS' },
-                  { id: 'adv-sub-weapons', label: t.subWeapons || 'SUB WEAPONS' },
-                  { id: 'adv-combos', label: t.weaponCombinations }
-                ].map(menu => (
+                  { id: 'adv-agents', label: t.agentSettings, modeOnly: 'party' },
+                  { id: 'adv-main-weapons', label: t.mainWeapons || 'MAIN WEAPONS', modeOnly: 'party' },
+                  { id: 'adv-sub-weapons', label: t.subWeapons || 'SUB WEAPONS', modeOnly: 'party' },
+                  { id: 'adv-combos', label: t.weaponCombinations, modeOnly: 'party' }
+                ].filter(menu => !menu.modeOnly || appMode === menu.modeOnly).map(menu => (
                   <button
                     key={menu.id}
                     onClick={() => setActiveTab(menu.id as AdvancedTab)}
@@ -623,19 +674,19 @@ export default function Page() {
               <AdvancedCategory title={t.mapSettings} items={MAPS} category="maps" bannedList={advanced.bannedMaps} weights={advanced.mapWeights} onToggleBan={(item) => toggleBan('bannedMaps', item)} onUpdateWeight={(item, w) => updateWeight('mapWeights', item, w)} t={t} />
             )}
             
-            {activeTab === 'adv-agents' && (
+            {appMode === 'party' && activeTab === 'adv-agents' && (
               <AdvancedCategory title={t.agentSettings} items={AGENTS} category="agents" bannedList={advanced.bannedAgents} weights={advanced.agentWeights} onToggleBan={(item) => toggleBan('bannedAgents', item)} onUpdateWeight={(item, w) => updateWeight('agentWeights', item, w)} t={t} />
             )}
             
-            {activeTab === 'adv-main-weapons' && (
+            {appMode === 'party' && activeTab === 'adv-main-weapons' && (
               <AdvancedCategory title={t.mainWeapons || 'MAIN WEAPONS'} items={MAIN_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggleBan={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, w) => updateWeight('weaponWeights', item, w)} t={t} />
             )}
             
-            {activeTab === 'adv-sub-weapons' && (
+            {appMode === 'party' && activeTab === 'adv-sub-weapons' && (
               <AdvancedCategory title={t.subWeapons || 'SUB WEAPONS'} items={SUB_WEAPONS} category="weapons" bannedList={advanced.bannedWeapons} weights={advanced.weaponWeights} onToggleBan={(item) => toggleBan('bannedWeapons', item)} onUpdateWeight={(item, w) => updateWeight('weaponWeights', item, w)} t={t} />
             )}
             
-            {activeTab === 'adv-combos' && (
+            {appMode === 'party' && activeTab === 'adv-combos' && (
               <div className="bg-black/30 p-4 md:p-6 border-l-4 border-val-gray mb-6 shadow-xl animate-fade-in">
                 <div className="font-bold text-xl md:text-2xl flex justify-between items-center outline-none">
                   {t.weaponCombinations}
@@ -789,7 +840,7 @@ export default function Page() {
                 const side = result.sides?.[teamKey];
                 const isDefender = side === 'Defender';
                 
-                const color = teamCount === 2 
+                const color = (appMode === 'party' || teamCount === 2)
                   ? (isDefender ? TEAM_COLORS[0] : TEAM_COLORS[1]) 
                   : TEAM_COLORS[index % TEAM_COLORS.length];
                 
@@ -801,7 +852,7 @@ export default function Page() {
 
                 return (
                   <React.Fragment key={teamKey}>
-                    {index > 0 && teamCount === 2 && (
+                    {index > 0 && (appMode === 'party' || teamCount === 2) && (
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
                         <div className="bg-val-dark px-5 py-2 border-2 border-val-red text-val-red font-bold text-xl md:text-2xl italic shadow-2xl -skew-x-10">
                           <div className="skew-x-10">{t.vs || 'VS'}</div>
@@ -810,7 +861,7 @@ export default function Page() {
                     )}
 
                     <div className={`flex-1 ${color.bg} border-t-2 ${color.border} p-2 md:p-3 relative overflow-hidden shadow-lg flex flex-col min-h-0 rounded-b items-start`}>
-                      {teamCount === 2 && (
+                      {(appMode === 'party' || teamCount === 2) && (
                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
                            {isDefender ? <Shield className="w-80 h-80" /> : <Swords className="w-80 h-80" />}
                          </div>
@@ -818,7 +869,7 @@ export default function Page() {
                       <div className="flex items-center gap-4 mb-2 relative z-10 pl-2 shrink-0 w-full">
                         <h2 className={`text-xl md:text-2xl font-bold uppercase italic tracking-tighter ${color.header} flex items-center gap-3`}>
                           {title}
-                          {!config.autoTeams && teamCount === 2 && (
+                          {!config.autoTeams && (appMode === 'party' || teamCount === 2) && (
                             <span className="text-base font-normal text-val-light opacity-80 tracking-widest">[{t[teamKey.replace(' ', '').toLowerCase()] || (lang === 'ja' ? `チーム ${index + 1}` : teamKey)}]</span>
                           )}
                         </h2>
@@ -838,7 +889,6 @@ export default function Page() {
               })}
             </div>
 
-            {/* なぜ: 結果確認後も、同じように目立つボタンですぐにチームを再生成できるようにするため */}
             <div className="flex justify-center mt-6 md:mt-8 pt-4 pb-8">
               <button 
                 onClick={handleGenerate}

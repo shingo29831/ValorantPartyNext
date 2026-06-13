@@ -1,9 +1,9 @@
 // src/types/index.ts
 // AI Role: ドメインモデルと型定義の提供
-// 役割: アプリケーション全体で利用するデータ構造の定義
+// 役割: アプリケーション全体で利用するデータ構造の定義。Team型をstringに変更
 
 export type Rank = 'None' | 'Iron' | 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Ascendant' | 'Immortal' | 'Radiant';
-export type Team = 'Team1' | 'Team2';
+export type Team = string;
 export type Side = 'Attacker' | 'Defender';
 export type Role = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
 

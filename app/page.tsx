@@ -53,6 +53,7 @@ export default function Page() {
   const [screen, setScreen] = useState<ScreenState>('setup');
   const [lang, setLang] = useState<Language>('ja');
   const [activeTab, setActiveTab] = useState<AdvancedTab>('adv-rank');
+  const [teamCount, setTeamCount] = useState<number>(2);
   const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
   
   const [config, setConfig] = useState<RandomizerConfig>({
@@ -80,7 +81,7 @@ export default function Page() {
   const [result, setResult] = useState<MatchResult | null>(null);
 
   const [playerHistory, setPlayerHistory] = useState<PlayerHistoryData[]>([]);
-  const [isRulesExpanded, setIsRulesExpanded] = useState(true);
+  const [isRulesExpanded, setIsRulesExpanded] = useState(false);
 
   const t = TRANSLATIONS[lang] as Record<string, string>;
 
@@ -232,6 +233,33 @@ export default function Page() {
       ...prev,
       [dictKey]: { ...prev[dictKey], [item]: weight }
     }));
+  };
+
+  const handleTeamCountChange = (count: number) => {
+    const validCount = Math.max(2, count);
+    setTeamCount(validCount);
+    
+    const targetPlayerCount = validCount * 5;
+    setPlayers(prev => {
+      if (prev.length < targetPlayerCount) {
+        const newPlayers = [...prev];
+        for (let i = prev.length; i < targetPlayerCount; i++) {
+          const teamIndex = Math.floor(i / 5) + 1;
+          newPlayers.push({
+            id: `p${i + 1}`,
+            name: `Player ${i + 1}`,
+            rank: 'None',
+            tier: 2,
+            fixedTeam: `Team ${teamIndex}`,
+            preferredRoles: [],
+          });
+        }
+        return newPlayers;
+      } else if (prev.length > targetPlayerCount) {
+        return prev.slice(0, targetPlayerCount);
+      }
+      return prev;
+    });
   };
 
   const renderToggle = (key: keyof RandomizerConfig, label: string) => (
@@ -393,63 +421,61 @@ export default function Page() {
             )}
 
             <section className="bg-val-blue border-l-4 border-val-gray p-4 md:p-6">
-              <div className="mb-5">
-                <h2 className="text-xl md:text-2xl font-bold uppercase italic flex items-center gap-2 mb-1">
-                  <Users className="text-val-gray w-6 h-6" /> {t.players}
-                </h2>
-                <p className="text-val-gray/50 text-xs md:text-sm italic tracking-wider">
-                  {t.dragDropHint || 'プレイヤーをドラッグ&ドロップで入れ替え'}
-                </p>
+              <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold uppercase italic flex items-center gap-2 mb-1">
+                    <Users className="text-val-gray w-6 h-6" /> {t.players}
+                  </h2>
+                  <p className="text-val-gray/50 text-xs md:text-sm italic tracking-wider">
+                    {t.dragDropHint || 'プレイヤーをドラッグ&ドロップで入れ替え'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20">
+                  <span className="font-bold text-val-gray text-sm md:text-base">{t.teamCount || 'Team Count'}:</span>
+                  <input
+                    type="number"
+                    min="2"
+                    max="10"
+                    value={teamCount}
+                    onChange={(e) => handleTeamCountChange(parseInt(e.target.value) || 2)}
+                    className="bg-black/50 text-val-light px-3 py-1 rounded border border-val-gray/40 w-16 md:w-20 outline-none focus:border-val-red text-center"
+                  />
+                </div>
               </div>
 
               {!config.autoTeams ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
-                  <div>
-                    <h3 className="text-xl font-bold mb-4 text-blue-400 border-b border-blue-500/30 pb-2 flex justify-between items-end">
-                      {t.team1}
-                      <span className="text-sm font-normal text-val-light opacity-60">{players.filter(p => p.fixedTeam === 'Team 1').length} {t.playerCount}</span>
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                      {players.map((p, i) => p.fixedTeam === 'Team 1' && (
-                        <PlayerRow
-                          key={p.id}
-                          player={p}
-                          index={i}
-                          config={config}
-                          t={t}
-                          onUpdateName={updatePlayerName}
-                          onUpdateRank={updatePlayerRank}
-                          onUpdateTier={updatePlayerTier}
-                          onToggleRole={togglePlayerRole}
-                          onToggleTeam={updatePlayerTeam}
-                          onSwapPlayers={swapPlayers}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-4 text-val-red border-b border-val-red/30 pb-2 flex justify-between items-end">
-                      {t.team2}
-                      <span className="text-sm font-normal text-val-light opacity-60">{players.filter(p => p.fixedTeam === 'Team 2').length} {t.playerCount}</span>
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                      {players.map((p, i) => p.fixedTeam === 'Team 2' && (
-                        <PlayerRow
-                          key={p.id}
-                          player={p}
-                          index={i}
-                          config={config}
-                          t={t}
-                          onUpdateName={updatePlayerName}
-                          onUpdateRank={updatePlayerRank}
-                          onUpdateTier={updatePlayerTier}
-                          onToggleRole={togglePlayerRole}
-                          onToggleTeam={updatePlayerTeam}
-                          onSwapPlayers={swapPlayers}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  {Array.from({ length: teamCount }).map((_, teamIdx) => {
+                    const teamNum = teamIdx + 1;
+                    const isOdd = teamNum % 2 !== 0;
+                    return (
+                      <div key={`team-${teamNum}`}>
+                        <h3 className={`text-xl font-bold mb-4 border-b pb-2 flex justify-between items-end ${isOdd ? 'text-blue-400 border-blue-500/30' : 'text-val-red border-val-red/30'}`}>
+                          {t[`team${teamNum}`] || `Team ${teamNum}`}
+                          <span className="text-sm font-normal text-val-light opacity-60">
+                            {players.filter(p => p.fixedTeam === `Team ${teamNum}`).length} {t.playerCount}
+                          </span>
+                        </h3>
+                        <div className="flex flex-col gap-3">
+                          {players.map((p, i) => p.fixedTeam === `Team ${teamNum}` && (
+                            <PlayerRow
+                              key={p.id}
+                              player={p}
+                              index={i}
+                              config={config}
+                              t={t}
+                              onUpdateName={updatePlayerName}
+                              onUpdateRank={updatePlayerRank}
+                              onUpdateTier={updatePlayerTier}
+                              onToggleRole={togglePlayerRole}
+                              onToggleTeam={updatePlayerTeam}
+                              onSwapPlayers={swapPlayers}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">

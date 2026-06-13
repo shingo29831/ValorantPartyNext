@@ -151,6 +151,28 @@ export default function Page() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleRerollMap = () => {
+    if (!result) return;
+    const availableMaps = MAPS.filter(m => !advanced.bannedMaps.includes(m));
+    if (availableMaps.length === 0) return;
+
+    // なぜ: BANされていないマップの中から、詳細設定の重みを考慮してランダムに再選出するため
+    const weights = availableMaps.map(m => advanced.mapWeights[m] ?? 10);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let random = Math.random() * totalWeight;
+    
+    let selectedMap = availableMaps[0];
+    for (let i = 0; i < availableMaps.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        selectedMap = availableMaps[i];
+        break;
+      }
+    }
+
+    setResult(prev => prev ? { ...prev, map: selectedMap } : null);
+  };
+
   const handleAddFromHistory = (historyItem: PlayerHistoryData) => {
     const defaultPlayerIndex = players.findIndex(p => /^Player \d+$/.test(p.name));
     if (defaultPlayerIndex !== -1) {
@@ -710,6 +732,16 @@ export default function Page() {
                 <div className="absolute inset-y-0 left-0 flex flex-col justify-center p-4 md:p-8 pointer-events-none">
                   <span className="text-[10px] md:text-sm text-val-gray font-bold uppercase tracking-widest mb-1">{t.map}</span>
                   <span className="text-2xl md:text-5xl text-white font-bold uppercase tracking-tighter italic drop-shadow-md">{t[result.map] || result.map}</span>
+                </div>
+                {/* なぜ: 生成されたチーム状態を維持したまま、マップのみを即座に再抽選できるようにするため */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-4 md:pr-8 z-10">
+                  <button 
+                    onClick={handleRerollMap}
+                    className="bg-val-red hover:bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 font-bold uppercase tracking-wider transition-colors flex items-center gap-2 text-xs md:text-sm shadow-md rounded animate-fade-in"
+                  >
+                    <RefreshCw className="w-3 h-3 md:w-4 md:h-4" />
+                    {lang === 'ja' ? 'マップ再抽選' : 'Reroll Map'}
+                  </button>
                 </div>
               </div>
             )}

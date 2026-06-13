@@ -54,6 +54,7 @@ export default function Page() {
   const [lang, setLang] = useState<Language>('ja');
   const [activeTab, setActiveTab] = useState<AdvancedTab>('adv-rank');
   const [teamCount, setTeamCount] = useState<number>(2);
+  const [playersPerTeam, setPlayersPerTeam] = useState<number>(5);
   const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
   
   const [config, setConfig] = useState<RandomizerConfig>({
@@ -256,31 +257,47 @@ export default function Page() {
     }));
   };
 
-  const handleTeamCountChange = (count: number) => {
-    const validCount = Math.max(2, count);
-    setTeamCount(validCount);
-    
-    const targetPlayerCount = validCount * 5;
+  // なぜ: チーム数や人数が変更された際に、全体のプレイヤー枠数を動的に増減し、所属チームを再割り当てするため
+  const updatePlayerSlots = (newTeamCount: number, newPlayersPerTeam: number) => {
+    const targetPlayerCount = newTeamCount * newPlayersPerTeam;
     setPlayers(prev => {
-      if (prev.length < targetPlayerCount) {
-        const newPlayers = [...prev];
-        for (let i = prev.length; i < targetPlayerCount; i++) {
-          const teamIndex = Math.floor(i / 5) + 1;
-          newPlayers.push({
+      let updatedPlayers = [...prev];
+      
+      if (updatedPlayers.length < targetPlayerCount) {
+        for (let i = updatedPlayers.length; i < targetPlayerCount; i++) {
+          updatedPlayers.push({
             id: `p${i + 1}`,
             name: `Player ${i + 1}`,
             rank: 'None',
             tier: 2,
-            fixedTeam: `Team ${teamIndex}`,
+            fixedTeam: null,
             preferredRoles: [],
           });
         }
-        return newPlayers;
-      } else if (prev.length > targetPlayerCount) {
-        return prev.slice(0, targetPlayerCount);
+      } else if (updatedPlayers.length > targetPlayerCount) {
+        updatedPlayers = updatedPlayers.slice(0, targetPlayerCount);
       }
-      return prev;
+
+      return updatedPlayers.map((p, i) => {
+        const teamIndex = Math.floor(i / newPlayersPerTeam) + 1;
+        return {
+          ...p,
+          fixedTeam: `Team ${teamIndex}`
+        };
+      });
     });
+  };
+
+  const handleTeamCountChange = (count: number) => {
+    const validCount = Math.max(2, count);
+    setTeamCount(validCount);
+    updatePlayerSlots(validCount, playersPerTeam);
+  };
+
+  const handlePlayersPerTeamChange = (count: number) => {
+    const validCount = Math.max(2, Math.min(10, count));
+    setPlayersPerTeam(validCount);
+    updatePlayerSlots(teamCount, validCount);
   };
 
   const renderToggle = (key: keyof RandomizerConfig, label: string) => (
@@ -442,7 +459,7 @@ export default function Page() {
             )}
 
             <section className="bg-val-blue border-l-4 border-val-gray p-4 md:p-6">
-              <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="mb-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                 <div>
                   <h2 className="text-xl md:text-2xl font-bold uppercase italic flex items-center gap-2 mb-1">
                     <Users className="text-val-gray w-6 h-6" /> {t.players}
@@ -451,18 +468,32 @@ export default function Page() {
                     {t.dragDropHint || 'プレイヤーをドラッグ&ドロップで入れ替え'}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20">
-                  <span className="font-bold text-val-gray text-sm md:text-base">{t.teamCount || 'Team Count'}:</span>
-                  {/* なぜ: 直接入力ではなくドロップダウンリストで選択できるようにするため */}
-                  <select
-                    value={teamCount}
-                    onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
-                    className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
-                  >
-                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                      <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
-                    ))}
-                  </select>
+                <div className="flex flex-wrap items-center gap-3 bg-black/30 px-4 py-2 rounded border border-val-gray/20 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-val-gray text-sm md:text-base">{t.teamCount || 'Team Count'}:</span>
+                    <select
+                      value={teamCount}
+                      onChange={(e) => handleTeamCountChange(parseInt(e.target.value))}
+                      className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
+                    >
+                      {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-px h-6 bg-val-gray/40 hidden sm:block"></div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-val-gray text-sm md:text-base">{t.playersPerTeam || 'Players per Team'}:</span>
+                    <select
+                      value={playersPerTeam}
+                      onChange={(e) => handlePlayersPerTeamChange(parseInt(e.target.value))}
+                      className="bg-black/50 text-val-light px-3 py-1.5 rounded border border-val-gray/40 outline-none focus:border-val-red text-center cursor-pointer"
+                    >
+                      {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        <option key={num} value={num} className="bg-val-dark text-val-light">{num}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -761,7 +792,8 @@ export default function Page() {
                   )}
                   <div className="h-0.5 flex-1 bg-linear-to-r from-blue-500/50 to-transparent"></div>
                 </div>
-                <div className="grid grid-cols-5 gap-2 relative z-10 w-full">
+                {/* なぜ: 人数が5人を超える場合も折り返してきれいに表示できるようにするため */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 relative z-10 w-full">
                   {defenders.map(p => <PlayerCard key={p.id} player={p} isDefender={true} t={t} />)}
                 </div>
               </div>
@@ -784,7 +816,8 @@ export default function Page() {
                   )}
                   <div className="h-0.5 flex-1 bg-linear-to-r from-val-red/50 to-transparent"></div>
                 </div>
-                <div className="grid grid-cols-5 gap-2 relative z-10 w-full">
+                {/* なぜ: 人数が5人を超える場合も折り返してきれいに表示できるようにするため */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 relative z-10 w-full">
                   {attackers.map(p => <PlayerCard key={p.id} player={p} isDefender={false} t={t} />)}
                 </div>
               </div>
